@@ -34,7 +34,8 @@ int
 DescrVAO
     * vao_ind          = nullptr , // identificador de VAO (vertex array object) para secuencia indexada
     * vao_no_ind       = nullptr , // identificador de VAO para secuencia de vértices no indexada
-    * vao_glm          = nullptr ; // identificador de VAO para secuencia de vértices guardada en vectors de vec3
+    * vao_glm          = nullptr , // identificador de VAO para secuencia de vértices guardada en vectors de vec3
+    * vao_pol_no_ind   = nullptr ; // identificador de VAO para secuencia de vértices de polígono no indexada;
 Cauce 
     * cauce            = nullptr ; // puntero al objeto de la clase 'Cauce' en uso.
 
@@ -172,6 +173,87 @@ void DibujarTriangulo_glm( )
     assert( glGetError() == GL_NO_ERROR );
 }
 
+
+void DibujarPoligono_NoInd(unsigned int n)
+{    
+    using namespace std ;
+    using namespace glm ;
+
+    assert( glGetError() == GL_NO_ERROR );
+
+    if ( vao_pol_no_ind == nullptr )
+    {
+        // tablas de posiciones y colores de vértices (posiciones en 2D, con Z=0)
+        std::vector<vec2> posiciones;
+        float angulo;
+
+        // {v0, v1, v1, v2, v2, v3, v3, v4, v4, v5, v5, v0}
+        posiciones.push_back({1, 0});
+        for (int i = 1; i < n; i++) {
+            // Arista v_, v_i+1
+            angulo = 2.0f*M_PI * i/ n;
+            posiciones.push_back(vec2(cosf(angulo), sinf(angulo)));
+            posiciones.push_back(vec2(cosf(angulo), sinf(angulo)));
+        }   
+        posiciones.push_back({1, 0});
+
+        const vector<vec3>   colores(n*2, {1.0f, 0.0f, 0.0f});
+        
+        vao_pol_no_ind = new DescrVAO( cauce->num_atribs, new DescrVBOAtribs(cauce->ind_atrib_posiciones, posiciones));
+        vao_pol_no_ind->agregar( new DescrVBOAtribs( cauce->ind_atrib_colores, colores )) ;
+
+        assert( glGetError() == GL_NO_ERROR );
+    }
+   
+    assert( glGetError() == GL_NO_ERROR );
+   
+    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    cauce->fijarColor( { 0.0, 0.0, 0.0 });
+    vao_pol_no_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
+    vao_pol_no_ind->draw( GL_LINES );
+
+    assert( glGetError() == GL_NO_ERROR );
+}
+
+void DibujarPoligonoLoop_NoInd(unsigned int n)
+{    
+    using namespace std ;
+    using namespace glm ;
+
+    assert( glGetError() == GL_NO_ERROR );
+
+    if ( vao_pol_no_ind == nullptr )
+    {
+        // tablas de posiciones y colores de vértices (posiciones en 2D, con Z=0)
+        std::vector<vec2> posiciones;
+        float angulo;
+
+        // GL_LINE_LOOP requiere {v0, v1, v2, v3, v4, v5}
+        for (int i = 0; i < n; i++) {
+            // Arista v_, v_i+1
+            angulo = 2.0f*M_PI * i/ n;
+            posiciones.push_back(vec2(cosf(angulo), sinf(angulo)));
+        }   
+
+        const vector<vec3>   colores(n, {1.0f, 0.0f, 0.0f});
+        
+        vao_pol_no_ind = new DescrVAO( cauce->num_atribs, new DescrVBOAtribs(cauce->ind_atrib_posiciones, posiciones));
+        vao_pol_no_ind->agregar( new DescrVBOAtribs( cauce->ind_atrib_colores, colores )) ;
+
+        assert( glGetError() == GL_NO_ERROR );
+    }
+   
+    assert( glGetError() == GL_NO_ERROR );
+   
+    glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    cauce->fijarColor( { 0.0, 0.0, 0.0 });
+    vao_pol_no_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
+    vao_pol_no_ind->draw( GL_LINE_LOOP );
+
+    assert( glGetError() == GL_NO_ERROR );
+}
+
+
 // ---------------------------------------------------------------------------------------------
 // función que se encarga de visualizar el contenido en la ventana
 
@@ -205,20 +287,25 @@ void VisualizarFrame( )
     glDisable( GL_DEPTH_TEST );
 
     // Dibujar un triángulo, es una secuncia de vértice no indexada.
-    DibujarTriangulo_NoInd();
+    // DibujarTriangulo_NoInd();
 
-    // usa el color plano para el segundo triángulo
-    cauce->fijarUsarColorPlano( true );
+    // Dibujar un hexaǵono regular como secuencia de vértices no indexada.
+    //DibujarPoligono_NoInd(6);
 
-    // dibujar triángulo indexado (rotado y luego desplazado) 
-    cauce->pushMM();
-        cauce->compMM( translate( vec3{ 0.4f, 0.1f, -0.1f}  ));
-        cauce->compMM( rotate(  radians(23.0f), vec3{ 0.0f, 0.0f, 1.0f}   ));
-        DibujarTriangulo_Ind();     // indexado
-    cauce->popMM();
+    DibujarPoligonoLoop_NoInd(5);
+
+    // // usa el color plano para el segundo triángulo
+    // cauce->fijarUsarColorPlano( true );
+
+    // // dibujar triángulo indexado (rotado y luego desplazado) 
+    // cauce->pushMM();
+    //     cauce->compMM( translate( vec3{ 0.4f, 0.1f, -0.1f}  ));
+    //     cauce->compMM( rotate(  radians(23.0f), vec3{ 0.0f, 0.0f, 1.0f}   ));
+    //     DibujarTriangulo_Ind();     // indexado
+    // cauce->popMM();
 
     // dibujar un triángulo usando vectores de GLM
-    DibujarTriangulo_glm() ;
+    // DibujarTriangulo_glm() ;
 
     // comprobar y limpiar variable interna de error
     assert( glGetError() == GL_NO_ERROR );
