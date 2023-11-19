@@ -32,10 +32,12 @@ int
     ancho_actual        = 512 ,    // ancho actual del framebuffer, en pixels
     alto_actual         = 512 ;    // alto actual del framebuffer, en pixels
 DescrVAO
-    * vao_ind          = nullptr , // identificador de VAO (vertex array object) para secuencia indexada
-    * vao_no_ind       = nullptr , // identificador de VAO para secuencia de vértices no indexada
-    * vao_glm          = nullptr , // identificador de VAO para secuencia de vértices guardada en vectors de vec3
-    * vao_pol_no_ind   = nullptr ; // identificador de VAO para secuencia de vértices de polígono no indexada;
+    * vao_ind            = nullptr , // identificador de VAO (vertex array object) para secuencia indexada
+    * vao_no_ind         = nullptr , // identificador de VAO para secuencia de vértices no indexada
+    * vao_glm            = nullptr , // identificador de VAO para secuencia de vértices guardada en vectors de vec3
+    * vao_pol_no_ind     = nullptr , // identificador de VAO para secuencia de vértices de polígono no indexada;
+    * vao_pol_tri_no_ind = nullptr , // identificador de VAO para secuencia de vértices de polígono formado por GL_TRIANGLES no indexado.
+    * vao_pol_ind        = nullptr ; // identificador de VAO para secuencia de vértices de polígono indexada;
 Cauce 
     * cauce            = nullptr ; // puntero al objeto de la clase 'Cauce' en uso.
 
@@ -173,31 +175,37 @@ void DibujarTriangulo_glm( )
     assert( glGetError() == GL_NO_ERROR );
 }
 
+// Poligono regular de n lados no indexado con GL_LINES
 
 void DibujarPoligono_NoInd(unsigned int n)
 {    
-    using namespace std ;
-    using namespace glm ;
-
     assert( glGetError() == GL_NO_ERROR );
 
     if ( vao_pol_no_ind == nullptr )
     {
         // tablas de posiciones y colores de vértices (posiciones en 2D, con Z=0)
-        std::vector<vec2> posiciones;
+        std::vector<glm::vec2> posiciones;
+        std::vector<glm::vec3> colores;
         float angulo;
 
+        // GL_LINES dibuja n/2 segmentos 
         // {v0, v1, v1, v2, v2, v3, v3, v4, v4, v5, v5, v0}
         posiciones.push_back({1, 0});
-        for (int i = 1; i < n; i++) {
+        colores.push_back({1, 1, 0});
+
+        for (int i = 1; i < n; i++)
+        {
             // Arista v_, v_i+1
             angulo = 2.0f*M_PI * i/ n;
-            posiciones.push_back(vec2(cosf(angulo), sinf(angulo)));
-            posiciones.push_back(vec2(cosf(angulo), sinf(angulo)));
+            posiciones.push_back({cosf(angulo), sinf(angulo)});
+            colores.push_back({cosf(angulo), cosf(angulo), sinf(angulo)});
+
+            posiciones.push_back({cosf(angulo), sinf(angulo)});
+            colores.push_back({cosf(angulo), cosf(angulo), sinf(angulo)});
         }   
         posiciones.push_back({1, 0});
+        colores.push_back({1, 1, 0});
 
-        const vector<vec3>   colores(n*2, {1.0f, 0.0f, 0.0f});
         
         vao_pol_no_ind = new DescrVAO( cauce->num_atribs, new DescrVBOAtribs(cauce->ind_atrib_posiciones, posiciones));
         vao_pol_no_ind->agregar( new DescrVBOAtribs( cauce->ind_atrib_colores, colores )) ;
@@ -208,34 +216,34 @@ void DibujarPoligono_NoInd(unsigned int n)
     assert( glGetError() == GL_NO_ERROR );
    
     glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-    cauce->fijarColor( { 0.0, 0.0, 0.0 });
-    vao_pol_no_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
+    // cauce->fijarColor( { 0.0, 0.0, 0.0 });
+    //vao_pol_no_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
     vao_pol_no_ind->draw( GL_LINES );
 
     assert( glGetError() == GL_NO_ERROR );
 }
 
+// Poligono regular de n lados no indexado con GL_LINE_LOOP
+
 void DibujarPoligonoLoop_NoInd(unsigned int n)
 {    
-    using namespace std ;
-    using namespace glm ;
-
     assert( glGetError() == GL_NO_ERROR );
 
     if ( vao_pol_no_ind == nullptr )
     {
         // tablas de posiciones y colores de vértices (posiciones en 2D, con Z=0)
-        std::vector<vec2> posiciones;
+        std::vector<glm::vec2> posiciones;
+        std::vector<glm::vec3> colores;
         float angulo;
 
-        // GL_LINE_LOOP requiere {v0, v1, v2, v3, v4, v5}
-        for (int i = 0; i < n; i++) {
-            // Arista v_, v_i+1
+        // GL_LINE_LOOP requiere {v0, v1, v2, v3, ..v_{n-1}}
+        for (int i = 0; i < n; i++)
+        {
             angulo = 2.0f*M_PI * i/ n;
-            posiciones.push_back(vec2(cosf(angulo), sinf(angulo)));
+            posiciones.push_back({cosf(angulo), sinf(angulo)});
+            colores.push_back({cosf(angulo), cosf(angulo), sinf(angulo)});
         }   
 
-        const vector<vec3>   colores(n, {1.0f, 0.0f, 0.0f});
         
         vao_pol_no_ind = new DescrVAO( cauce->num_atribs, new DescrVBOAtribs(cauce->ind_atrib_posiciones, posiciones));
         vao_pol_no_ind->agregar( new DescrVBOAtribs( cauce->ind_atrib_colores, colores )) ;
@@ -246,15 +254,109 @@ void DibujarPoligonoLoop_NoInd(unsigned int n)
     assert( glGetError() == GL_NO_ERROR );
    
     glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-    cauce->fijarColor( { 0.0, 0.0, 0.0 });
-    vao_pol_no_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
+    //cauce->fijarColor( { 0.0, 0.0, 0.0 });
+    //vao_pol_no_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
     vao_pol_no_ind->draw( GL_LINE_LOOP );
 
     assert( glGetError() == GL_NO_ERROR );
 }
 
+// Poligono Regular de N lados formado por N triangulos rellenos con 3*n vértices (no indexados) 
+void DibujarPoligonoRellenoTriangles_NoInd(unsigned int n)
+{
 
-// ---------------------------------------------------------------------------------------------
+    assert( glGetError() == GL_NO_ERROR );
+
+    if ( vao_pol_tri_no_ind == nullptr )
+    {
+        // tablas de posiciones y colores de vértices (posiciones en 2D, con Z=0)
+        std::vector<glm::vec2> posiciones;
+        std::vector<glm::vec3> colores;
+
+        // Origen, vértices comun de los triangulos
+        float angulo, angulo2;
+
+        for (int i=0; i < n; i++)
+        {
+            posiciones.push_back({0, 0});
+            colores.push_back({0, 0, 0});
+
+            angulo = 2.0f * M_PI * i/n;
+            posiciones.push_back({cosf(angulo), sinf(angulo)});
+            colores.push_back({1, cosf(angulo), sinf(angulo)});
+
+            angulo2 = 2.0f * M_PI * (i+1)/n;
+            posiciones.push_back({cosf(angulo2), sinf(angulo2)});
+            colores.push_back({1, cosf(angulo2), sinf(angulo2)});
+        }
+        
+        vao_pol_tri_no_ind = new DescrVAO( cauce->num_atribs, new DescrVBOAtribs(cauce->ind_atrib_posiciones, posiciones));
+        vao_pol_tri_no_ind->agregar(new DescrVBOAtribs(cauce->ind_atrib_colores, colores));
+
+        assert( glGetError() == GL_NO_ERROR );
+    }
+   
+    assert( glGetError() == GL_NO_ERROR );
+   
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    //cauce->fijarColor( { 0.0, 0.0, 0.0 });
+    //vao_pol_tri_no_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
+    vao_pol_tri_no_ind->draw( GL_TRIANGLES );
+
+    assert( glGetError() == GL_NO_ERROR );
+}
+
+// Poligono Regular de N lados formado por N triangulos rellenos con n+1 vértices y 3*n indices
+
+void DibujarPoligonoRellenoTriangles_Ind(unsigned int n)
+{    
+    assert( glGetError() == GL_NO_ERROR );
+
+    if ( vao_pol_ind == nullptr )
+    {
+        // tablas de posiciones y colores de vértices (posiciones en 2D, con Z=0)
+        std::vector<glm::vec2> posiciones;
+        std::vector<glm::vec3> colores;
+
+        // Origen, vértices comun de los triangulos
+        posiciones.push_back({0, 0});
+        colores.push_back({0, 0, 0});
+        float angulo;
+
+        for (int i=0; i < n; i++)
+        {
+            angulo = 2.0f * M_PI * i/n;
+            posiciones.push_back({cosf(angulo), sinf(angulo)});
+            colores.push_back({1, cosf(angulo), sinf(angulo)});
+        }
+
+        std::vector<glm::uvec3> indices;
+
+        // Los índices deben ser { {0,1,2}, {0,2,3}, ... {0, n+1, 1} }
+
+        for (int i=1; i < n; i++)
+            indices.push_back({0, i, i+1});
+
+        indices.push_back({0, n, 1});
+
+        
+        vao_pol_ind = new DescrVAO( cauce->num_atribs, new DescrVBOAtribs(cauce->ind_atrib_posiciones, posiciones));
+        vao_pol_ind->agregar(new DescrVBOAtribs(cauce->ind_atrib_colores, colores));
+        vao_pol_ind->agregar(new DescrVBOInds(indices));
+
+        assert( glGetError() == GL_NO_ERROR );
+    }
+   
+    assert( glGetError() == GL_NO_ERROR );
+   
+    glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+    //cauce->fijarColor( { 0.0, 0.0, 0.0 });
+    //vao_pol_ind->habilitarAtrib( cauce->ind_atrib_colores, false );
+    vao_pol_ind->draw( GL_TRIANGLES );
+
+    assert( glGetError() == GL_NO_ERROR );
+}
+
 // función que se encarga de visualizar el contenido en la ventana
 
 void VisualizarFrame( )
@@ -291,8 +393,10 @@ void VisualizarFrame( )
 
     // Dibujar un hexaǵono regular como secuencia de vértices no indexada.
     //DibujarPoligono_NoInd(6);
-
-    DibujarPoligonoLoop_NoInd(5);
+    //DibujarPoligonoLoop_NoInd(5);
+    //DibujarPoligonoRellenoTriangles_NoInd(8);
+    DibujarPoligonoRellenoTriangles_Ind(4);
+    
 
     // // usa el color plano para el segundo triángulo
     // cauce->fijarUsarColorPlano( true );
